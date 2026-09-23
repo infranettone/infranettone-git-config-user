@@ -1,0 +1,66 @@
+name: Release
+
+# Publicar es subir `__version__` en src/git_config_user/__init__.py y push a
+# main. Si esa versión ya tiene release, no se hace nada.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deb:
+    name: .deb (all)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Versión
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/git_config_user/__init__.py)"
+          if [ -z "$version" ]; then
+            echo "No se pudo leer la versión" >&2
+            exit 1
+          fi
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::v$version ya está publicada, no hay nada que hacer."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Tests
+        if: steps.version.outputs.publish == 'true'
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Construir el .deb
+        if: steps.version.outputs.publish == 'true'
+        run: ./scripts/build-deb.sh
+
+      - name: Publicar la release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          cd build
+          sha256sum ./*.deb > SHA256SUMS
+          gh release create "$TAG" ./*.deb SHA256SUMS \
+            --target "$GITHUB_SHA" \
+            --title "Git Config User $TAG" \
+            --notes "Instalación: \`sudo apt install ./git-config-user_*_all.deb\` y abre «Git Config User» desde el menú."

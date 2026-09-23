@@ -1,0 +1,8 @@
+#!/usr/bin/python3
+import sys
+
+sys.path.insert(0, "/usr/lib/git-config-user")
+
+from git_config_user.ui import main  # noqa: E402
+
+sys.exit(main())

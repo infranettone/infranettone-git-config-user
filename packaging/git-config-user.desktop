@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Git Config User
+Comment=Revisa qué user.name y user.email usa cada repositorio git
+Exec=git-config-user
+Icon=git-config-user
+Terminal=false
+Categories=Development;Utility;
+Keywords=git;config;user;email;identidad;repositorio;

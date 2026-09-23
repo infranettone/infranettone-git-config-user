@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Runners alojados de GitHub; actions ancladas a SHA.
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Dependencias
+        run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-3.0
+      - name: Tests
+        run: python3 -m unittest discover -s tests -v
+      - name: La UI importa
+        run: PYTHONPATH=src python3 -c "import git_config_user.ui"
+      - name: Construir el .deb
+        run: ./scripts/build-deb.sh
+        env:
+          DEB_VERSION_SUFFIX: ${{ github.sha }}
+      - name: Instalar el .deb
+        run: sudo apt-get install -y ./build/*.deb && test -x /usr/bin/git-config-user
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: git-config-user-deb
+          path: build/*.deb
+          if-no-files-found: error
