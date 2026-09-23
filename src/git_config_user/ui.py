@@ -191,10 +191,9 @@ class Window(Gtk.ApplicationWindow):
         threading.Thread(target=work, daemon=True).start()
 
     def _render(self) -> None:
-        selected = set(self._selected_paths())
         base = Path(self.settings.base_dir)
         counts = dict.fromkeys(STATUS_TEXT, 0)
-        self.store.clear()
+        rows = []
         for r in self.repos:
             status, expected = core.evaluate(r, self.settings.profiles)
             counts[status] += 1
@@ -212,8 +211,9 @@ class Window(Gtk.ApplicationWindow):
                     tip.append(f"{label} de {GLib.markup_escape_text(v.origin)}")
             if r.error:
                 tip.append(GLib.markup_escape_text(r.error))
-            self.store.append([str(r.path), icon, text, rel, r.name.value or "—", r.email.value or "—",
-                               scope, expected.label if expected else "", remote or "—", status, "\n".join(tip)])
+            rows.append([str(r.path), icon, text, rel, r.name.value or "—", r.email.value or "—",
+                         scope, expected.label if expected else "", remote or "—", status, "\n".join(tip)])
+        self._sync_store(rows)
         problems = len(self.repos) - counts[core.STATUS_OK]
         parts = [f"<b>{len(self.repos)}</b> repositorios", f"{counts[core.STATUS_OK]} correctos"]
         for status, label in ((core.STATUS_WRONG, "incorrectos"), (core.STATUS_UNKNOWN, "desconocidos"),
@@ -223,8 +223,24 @@ class Window(Gtk.ApplicationWindow):
         if not problems and self.repos:
             parts.append("todo en orden")
         self.summary.set_markup(" · ".join(parts))
-        self._reselect(selected)
         self._update_actions()
+
+    def _sync_store(self, rows: list[list[str]]) -> None:
+        """Updates the store in place so the periodic rescan keeps scroll position and selection."""
+        wanted = {row[C_PATH]: row for row in rows}
+        it = self.store.get_iter_first()
+        while it is not None:
+            path = self.store[it][C_PATH]
+            row = wanted.pop(path, None)
+            if row is None:
+                if not self.store.remove(it):  # remove() moves `it` to the next row
+                    it = None
+                continue
+            if list(self.store[it]) != row:
+                self.store.set(it, list(range(len(row))), row)
+            it = self.store.iter_next(it)
+        for row in wanted.values():
+            self.store.append(row)
 
     def _visible(self, model, it, _data) -> bool:
         mode = self.status_filter.get_active_id()
@@ -244,17 +260,6 @@ class Window(Gtk.ApplicationWindow):
     def _selected_paths(self) -> list[str]:
         model, rows = self.view.get_selection().get_selected_rows()
         return [model[r][C_PATH] for r in rows]
-
-    def _reselect(self, paths: set[str]) -> None:
-        if not paths:
-            return
-        sel = self.view.get_selection()
-        model = self.view.get_model()
-        it = model.get_iter_first()
-        while it is not None:
-            if model[it][C_PATH] in paths:
-                sel.select_iter(it)
-            it = model.iter_next(it)
 
     def _update_actions(self) -> None:
         has_sel = bool(self._selected_paths())
