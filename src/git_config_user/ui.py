@@ -100,7 +100,8 @@ class Window(Gtk.ApplicationWindow):
         col.add_attribute(txt, "text", C_STATUS_TXT)
         col.set_sort_column_id(C_STATUS_TXT)
         self.view.append_column(col)
-        for title, column, expand in (("Repositorio", C_REL, True), ("user.name", C_NAME, False),
+        for title, column, expand in (("Repositorio", C_REL, True), ("remote.origin.url", C_REMOTE, True),
+                                      ("user.name", C_NAME, False),
                                       ("user.email", C_EMAIL, False), ("Definido en", C_SCOPE, False),
                                       ("Perfil esperado", C_EXPECTED, False)):
             renderer = Gtk.CellRendererText(ellipsize=3 if expand else 0)  # 3 = Pango.EllipsizeMode.END
@@ -203,16 +204,16 @@ class Window(Gtk.ApplicationWindow):
             if r.name.scope and r.email.scope and r.name.scope != r.email.scope:
                 scope = f"{SCOPE_TEXT.get(r.name.scope)} / {SCOPE_TEXT.get(r.email.scope)}"
             tip = [f"<b>{GLib.markup_escape_text(str(r.path))}</b>"]
-            if r.remote:
-                shown = re.sub(r"://[^/@]*@", "://", r.remote)  # never show embedded tokens
-                tip.append(f"Remoto: {GLib.markup_escape_text(shown)}")
+            remote = re.sub(r"://[^/@]*@", "://", r.remote)  # never show embedded tokens
+            if remote:
+                tip.append(f"Remoto: {GLib.markup_escape_text(remote)}")
             for label, v in (("user.name", r.name), ("user.email", r.email)):
                 if v.origin:
                     tip.append(f"{label} de {GLib.markup_escape_text(v.origin)}")
             if r.error:
                 tip.append(GLib.markup_escape_text(r.error))
             self.store.append([str(r.path), icon, text, rel, r.name.value or "—", r.email.value or "—",
-                               scope, expected.label if expected else "", r.remote, status, "\n".join(tip)])
+                               scope, expected.label if expected else "", remote or "—", status, "\n".join(tip)])
         problems = len(self.repos) - counts[core.STATUS_OK]
         parts = [f"<b>{len(self.repos)}</b> repositorios", f"{counts[core.STATUS_OK]} correctos"]
         for status, label in ((core.STATUS_WRONG, "incorrectos"), (core.STATUS_UNKNOWN, "desconocidos"),
