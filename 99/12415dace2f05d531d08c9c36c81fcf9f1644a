@@ -1,0 +1,25 @@
+CLAUDE.md
+  s_09f5b6fb470197::t_58364b28077528 33
+src/git_config_user/ui.py
+  s_09f5b6fb470197::t_c54ab88cc7d065 216
+  s_09f5b6fb470197::t_eb7f5fc3893015 207-209
+  s_09f5b6fb470197::t_6734ac525ed30f 103-104
+src/git_config_user/__init__.py
+  s_09f5b6fb470197::t_716f507c929bf4 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9912415dace2f05d531d08c9c36c81fcf9f1644a",
+  "prompts": {},
+  "sessions": {
+    "s_09f5b6fb470197": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "860936cd-3bde-4a88-9497-52bc75d74964",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Raul Adamuz <radamuzc@gmail.com>"
+    }
+  }
+}
